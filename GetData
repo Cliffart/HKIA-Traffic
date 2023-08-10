@@ -1,0 +1,59 @@
+import requests
+from pyairports.airports import Airports
+from datetime import date
+
+airports = Airports()
+current_date = date.today()
+a_or_d = input("Arrival/Departure? (Enter 'true' for arrival and 'false' for departure): ")
+
+while a_or_d != "true" and a_or_d != "false":
+    print("Invalid input!")
+    a_or_d = input("Arrival/Departure? (Enter 'true' for arrival and 'false' for departure): ")
+
+response = requests.get(f"https://www.hongkongairport.com/flightinfo-rest/rest/flights/past?date={current_date}&arrival={a_or_d}&lang=en&cargo=false")
+
+data = response.json()
+while True:
+    flight_no = input("Please enter flight number: ")
+    
+    selected_data = None
+
+    try:  
+        for flight_data in data[1]['list']:
+            for flight in flight_data['flight']:
+                if flight['no'] == flight_no:
+                    selected_data = flight_data
+                    break
+            if selected_data:
+                break
+    except IndexError:
+        for flight_data in data[0]['list']:
+            for flight in flight_data['flight']:
+                if flight['no'] == flight_no:
+                    selected_data = flight_data
+                    break
+            if selected_data:
+                break
+
+    if selected_data:
+        time = selected_data['time']
+        flight_info = selected_data['flight'][0]
+        no = flight_info['no']
+        airline = flight_info['airline']
+        status = selected_data['status']
+        
+        try:
+            iata = selected_data['destination'][0]
+            terminal = selected_data['terminal']
+            gate = selected_data['gate']
+            destination = airports.lookup(iata).city
+            print(f"Flight Information\nTime: {time}\nNo: {no}\nAirline: {airline}\nStatus: {status}\nDestination: {destination}\nTerminal: {terminal}\nGate: {gate}")
+        except KeyError:
+            iata = selected_data['origin'][0]
+            baggage = selected_data['baggage']
+            hall = selected_data['hall']
+            stand = selected_data['stand']
+            origin = airports.lookup(iata).city
+            print(f"Flight Information\nTime: {time}\nNo: {no}\nAirline: {airline}\nStatus: {status}\nOrigin: {origin}\nBaggage: {baggage}\nHall: {hall}\nStand: {stand}")
+    else:
+        print("Flight not found.")
